@@ -340,12 +340,19 @@ function entityreference_view_widget_field_widget_form(&$form, &$form_state, $fi
   // displayed through the view.
   $substitutions = array();
   $result_entities = $view->query->get_result_entities($view->result);
+  $form_element_type = 'action';
+  if (!empty($view->field['entityreference_view_widget'])
+  && get_class($view->field['entityreference_view_widget']) == 'entityreference_view_widget_handler_field_checkbox') {
+    $options = $view->field['entityreference_view_widget']->options;
+    $form_element_type = $options['ervw']['force_single'] ? 'radio' : 'checkbox';
+  }
   foreach ($result_entities[1] as $row_id => $entity) {
     $entity_id = entity_id($entity_type, $entity);
     if (!$view->display_handler->options['hide_left']) {
       $element['add'][$entity_id] = array(
         '#type' => 'checkbox',
         '#refresh_items' => TRUE,
+        '#return_value' => $entity_id,
         '#ajax' => array(
           'path' => 'entityreference_view_widget/ajax/' . $field_name,
           'wrapper' => 'edit-' . str_replace('_', '-', $field_name),
@@ -359,15 +366,20 @@ function entityreference_view_widget_field_widget_form(&$form, &$form_state, $fi
     }
     else {
       $element['add'][$entity_id] = array(
-        '#type' => 'checkbox',
+        '#type' => $form_element_type == 'action' ? 'checkbox' : $form_element_type,
         '#refresh_items' => TRUE,
+        '#return_value' => $entity_id,
       );
+      if ($form_element_type == 'radio') {
+        $element['add'][$entity_id]['#parents'] = array($field_name, $field_language, 'add');
+      }
     }
     $substitutions[] = array(
       'placeholder' => '<!--entityreference-view-widget-action-' . $entity_id . '-->',
       'entity_id' => $entity_id,
     );
   }
+  $element['add']['#tree'] = TRUE;
   $element['#substitutions'] = array(
     '#type' => 'value',
     '#value' => $substitutions,
@@ -382,7 +394,7 @@ function entityreference_view_widget_field_widget_form(&$form, &$form_state, $fi
 function entityreference_view_widget_preprocess_widget(&$variables) {
   $form = $variables['form'];
 
-  // Replace the placeholders in the view with actual checkboxes.
+  // Replace the placeholders in the view with actual form elements.
   $search = array();
   $replace = array();
   foreach ($form['#substitutions']['#value'] as $substitution) {
@@ -478,10 +490,15 @@ function entityreference_view_widget_validate($element, &$form_state) {
   }
   // Then new items (marked for addition).
   if (!empty($element_values['add'])) {
-    $add = array_filter($element_values['add']);
-    foreach ($add as $entity_id => $status) {
-      if (!isset($element_values['items'][$entity_id])) {
-        $value[] = array('target_type' => $target_type, 'target_id' => $entity_id);
+    if (!is_array($element_values['add'])) {
+      $value[] = array('target_type' => $target_type, 'target_id' => $element_values['add']);
+    }
+    else {
+      $add = array_filter($element_values['add']);
+      foreach ($add as $entity_id => $status) {
+        if (!isset($element_values['items'][$entity_id])) {
+          $value[] = array('target_type' => $target_type, 'target_id' => $entity_id);
+        }
       }
     }
   }

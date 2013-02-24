@@ -43,3 +43,23 @@ function entityreference_view_widget_views_plugins() {
   );
   return $plugins;
 }
+
+/**
+ * Implements hook_views_data_alter().
+ */
+function entityreference_view_widget_views_data_alter(&$data) {
+  foreach (entity_get_info() as $entity_type => $info) {
+    if (isset($info['base table']) && isset($data[$info['base table']]['table'])) {
+      $data[$info['base table']]['entityreference_view_widget'] = array(
+        'title' => t('Entity Reference View Widget checkbox'),
+        'group' => t('Content'),
+        'help' => t('Provide a checkbox to select the row for an entity reference.'),
+        'real field' => $info['entity keys']['id'],
+        'field' => array(
+          'handler' => 'entityreference_view_widget_handler_field_checkbox',
+          'click sortable' => FALSE,
+        ),
+      );
+    }
+  }
+}
