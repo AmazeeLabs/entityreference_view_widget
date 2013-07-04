@@ -463,7 +463,13 @@ function theme_entityreference_view_widget_selected_items($variables) {
   drupal_add_tabledrag($table_id, 'order', 'sibling', $weight_class);
 
   $output = empty($rows) ? '' : theme('table', array('header' => array(), 'rows' => $rows, 'attributes' => array('id' => $table_id)));
-  $output .= drupal_render_children($element);
+  // alex: not sure why we need render elements double times, but this produces
+  // two problems:
+  // 1) elements appears double times,
+  // 2) javascript error appears because javascript settings (attached via
+  //    "#attached" attribute) process two times, so some parameters like
+  //    element_settings.url become an array.
+  //$output .= drupal_render_children($element);
   return $output;
 }
 
