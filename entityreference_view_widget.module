@@ -195,13 +195,25 @@ function entityreference_view_widget_field_widget_form(&$form, &$form_state, $fi
   // in $form_state['values'] because of validation limitations. Also, they are
   // only passed in as $items when editing existing entities.
   $field_state = field_form_get_state($element['#field_parents'], $field['field_name'], $langcode, $form_state);
+  // Store the original items ids, before they are ovewritten from the
+  // form_state.
+  $original_item_ids = array();
+  foreach ($items as $item_row) {
+    $original_item_ids[$item_row['target_id']] = $item_row['target_id'];
+  }
   if (isset($field_state['items'])) {
     $items = $field_state['items'];
   }
 
   $selected_entity_ids = array();
   foreach ($items as $item) {
-    $selected_entity_ids[] = $item['target_id'];
+    if (!empty($original_item_ids[$item['target_id']])) {
+      $selected_entity_ids[] = $item['target_id'];
+    }
+    // The new entries have to always be added on top.
+    else {
+      array_unshift($selected_entity_ids, $item['target_id']);
+    }
   }
 
   // First build the view used for selecting items.
@@ -294,7 +306,7 @@ function entityreference_view_widget_field_widget_form(&$form, &$form_state, $fi
       $selected_entities = entity_load($entity_type, $selected_entity_ids);
       $entity_view = entity_view($entity_type, $selected_entities, 'entityreference_view_widget');
       $entity_view = reset($entity_view);
-      $i = 0;
+      $i = -1 * count($selected_entities);
       foreach ($selected_entities as $entity_id => $entity) {
         // Remove the checkbox placeholder, it's not needed in this context.
         unset($entity_view[$entity_id]['entityreference_view_widget_action']);
